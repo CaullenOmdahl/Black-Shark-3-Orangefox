@@ -128,7 +128,7 @@ build_recovery() {
     export OF_AB_DEVICE=1
 
     # Build for A/B device
-    lunch omni_klein-eng
+    lunch orangefox_klein-eng
     mka recoveryimage
 }
 
