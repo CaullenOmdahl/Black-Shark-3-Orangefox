@@ -88,8 +88,8 @@ setup_device_tree() {
     if [ -d "device/blackshark" ]; then
         rm -rf device/blackshark
     fi
-    # Clone the device tree into device/blackshark
-    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark
+    # Clone the device tree into device/blackshark/klein
+    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
 }
 
 # Clone missing repositories
@@ -115,6 +115,43 @@ clone_additional_repos() {
         cd bootable
         git clone https://gitlab.com/OrangeFox/android_bootable_recovery.git recovery
         cd ../
+    fi
+}
+
+# Fix obsolete variables in device tree
+fix_device_tree() {
+    print_status "Fixing device tree issues..."
+    DEVICE_MK=~/fox_11.0/device/blackshark/klein/device.mk
+
+    # Remove obsolete PRODUCT_STATIC_BOOT_CONTROL_HAL
+    if grep -q "PRODUCT_STATIC_BOOT_CONTROL_HAL" "$DEVICE_MK"; then
+        sed -i '/PRODUCT_STATIC_BOOT_CONTROL_HAL/d' "$DEVICE_MK"
+        echo 'PRODUCT_PACKAGES += libbootcontrol' >> "$DEVICE_MK"
+        print_status "Replaced obsolete PRODUCT_STATIC_BOOT_CONTROL_HAL with libbootcontrol."
+    fi
+
+    # Ensure proper indentation and separators in device.mk
+    sed -i 's/^[ ]*/\t/' "$DEVICE_MK"
+
+    # Fix any missing backslashes in device.mk
+    sed -i '/^[^#].*[^\\]$/ s/$/ \\/' "$DEVICE_MK"
+
+    # Fix vendorsetup.sh to remove obsolete commands
+    VENDOR_SETUP=~/fox_11.0/device/blackshark/klein/vendorsetup.sh
+    if [ -f "$VENDOR_SETUP" ]; then
+        sed -i '/add_lunch_combo/d' "$VENDOR_SETUP"
+        print_status "Removed obsolete add_lunch_combo from vendorsetup.sh."
+    fi
+
+    # Define COMMON_LUNCH_CHOICES in AndroidProducts.mk
+    ANDROID_PRODUCTS_MK=~/fox_11.0/device/blackshark/klein/AndroidProducts.mk
+    if [ -f "$ANDROID_PRODUCTS_MK" ]; then
+        if ! grep -q "COMMON_LUNCH_CHOICES" "$ANDROID_PRODUCTS_MK"; then
+            echo -e '\nCOMMON_LUNCH_CHOICES := \\' >> "$ANDROID_PRODUCTS_MK"
+            echo '    omni_klein-eng \\' >> "$ANDROID_PRODUCTS_MK"
+            echo '    omni_klein-userdebug' >> "$ANDROID_PRODUCTS_MK"
+            print_status "Added COMMON_LUNCH_CHOICES to AndroidProducts.mk."
+        fi
     fi
 }
 
@@ -144,17 +181,6 @@ build_recovery() {
     # Build for A/B device
     lunch omni_klein-eng
     mka recoveryimage
-}
-
-# Fix obsolete variables in device tree
-fix_device_tree() {
-    print_status "Fixing device tree issues..."
-    DEVICE_MK=~/fox_11.0/device/blackshark/klein/device.mk
-    if grep -q "PRODUCT_STATIC_BOOT_CONTROL_HAL" "$DEVICE_MK"; then
-        sed -i '/PRODUCT_STATIC_BOOT_CONTROL_HAL/d' "$DEVICE_MK"
-        echo 'PRODUCT_PACKAGES += libbootcontrol' >> "$DEVICE_MK"
-        print_status "Replaced obsolete PRODUCT_STATIC_BOOT_CONTROL_HAL with libbootcontrol."
-    fi
 }
 
 # Check system requirements
