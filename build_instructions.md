@@ -1,153 +1,156 @@
-# Building OrangeFox
+#!/bin/bash
 
-## Requirements
-- **Disk Space**: You will need a minimum of **60GB** free space on your PC/Server. It is recommended to provide about **double** that amount. This space is needed for:
-  - The build system itself (about 35GB-45GB, depending on the manifest version).
-  - Device trees.
-  - The actual build (between 8GB to 12GB for each device).
-  - ccache's cache (if you use ccache).
+export PATH=~/bin:$PATH
 
-- **RAM**: 
-  - For the **11.0** manifest, a minimum of **16GB RAM** is required (20GB is better).
-  - For the **12.1** manifest, a minimum of **20GB RAM** is required (24GB is better).
-  - Insufficient RAM will lead to random build errors.
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-- **Operating System**: A proper and full **Linux development system** (note: "Linux" - NOT "Windows"). A Debian-based Linux distro (e.g., Ubuntu 20.04, Linux Mint 21.1) with a full development environment is recommended (including Java, GCC, etc.). If you use any other Linux distro, you are on your own.
+# Function to print status messages
+print_status() {
+    echo -e "${GREEN}[*] ${1}${NC}"
+}
 
-- **Python**: Python **2.x** is required (to find out your Python version, run `python -V`; if it is not v2.x, then you need to symlink Python to whatever Python 2 version is installed on your system) - only if you're using older OrangeFox sources.
+print_error() {
+    echo -e "${RED}[!] ${1}${NC}"
+}
 
-- **Device Tree**: OrangeFox/TWRP device tree for the device.
+print_warning() {
+    echo -e "${YELLOW}[!] ${1}${NC}"
+}
 
-- **Shell**: Up-to-date **bash shell** (note: "bash", NOT "zsh", or "tcsh", or "ksh", or "csh", or "dash", or any other shell).
+# Configure Git
+setup_git() {
+    print_status "Configuring Git..."
+    if [ -z "$(git config --global user.email)" ]; then
+        print_status "Setting up Git user email..."
+        read -p "Enter your Git email: " git_email
+        git config --global user.email "$git_email"
+    fi
 
-- **Note**: Do **NOT** build as root.
+    if [ -z "$(git config --global user.name)" ]; then
+        print_status "Setting up Git user name..."
+        read -p "Enter your Git name: " git_name
+        git config --global user.name "$git_name"
+    fi
+}
 
-## Initial Build of OrangeFox
+# Install required packages
+install_packages() {
+    print_status "Installing required packages..."
+    sudo apt update
+    sudo apt install -y \
+        git gnupg flex bison build-essential zip curl zlib1g-dev \
+        gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses-dev \
+        x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils \
+        xsltproc unzip fontconfig aria2 \
+        android-sdk-platform-tools adb fastboot openjdk-8-jdk python2
+}
 
-### 0. Prepare the Build Environment (Debian-based Linux Distros)
-```bash
-cd ~
-sudo apt install git aria2 -y
-git clone https://gitlab.com/OrangeFox/misc/scripts
-cd scripts
-sudo bash setup/android_build_env.sh
-sudo bash setup/install_android_sdk.sh
-```
+# Install repo tool
+install_repo() {
+    print_status "Installing the repo command..."
+    mkdir -p ~/bin
+    if [ ! -f ~/bin/repo ]; then
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+    fi
+}
 
-### 1. Sync OrangeFox Sources and Minimal Manifest
-Using the sync shell script from the "sync" repository; do **NOT** run this as root. The example below uses a script to sync the `fox_12.1` branch.
+# Setup Python environment
+setup_python() {
+    print_status "Setting up Python environment..."
+    # Update alternatives to use python2
+    sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
+    sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
+    sudo update-alternatives --set python /usr/bin/python2
+    # Ensure pip for Python 2 is installed
+    if ! command -v pip2 &> /dev/null; then
+        curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+        sudo python2 get-pip.py
+        rm get-pip.py
+    fi
+}
 
-- This method requires familiarity with Linux shell scripts.
-- If you want to build for Android 12 and higher ROMs, sync the `fox_12.1` branch. If you want to build for Android 11 ROMs, sync the `fox_11.0` branch.
+# Setup build environment
+setup_environment() {
+    print_status "Setting up build environment..."
+    mkdir -p ~/OrangeFox_sync
+    cd ~/OrangeFox_sync
+    if [ ! -d "sync" ]; then
+        git clone https://gitlab.com/OrangeFox/sync.git
+    fi
+    cd sync
+    ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
+}
 
-```bash
-mkdir ~/OrangeFox_sync
-cd ~/OrangeFox_sync
-git clone https://gitlab.com/OrangeFox/sync.git
-cd ~/OrangeFox_sync/sync/
-./orangefox_sync.sh --branch 12.1 --path ~/fox_12.1
-```
+# Setup device tree
+setup_device_tree() {
+    print_status "Setting up device tree..."
+    cd ~/fox_11.0
+    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
+}
 
-**Tip**: The version number of the build manifest is very different from the OrangeFox release version numbers. If you have synced as shown above, you already have the sources for the latest OrangeFox Stable releases for whichever branch you have synced.
+# Build OrangeFox
+build_recovery() {
+    print_status "Starting build process..."
+    cd ~/fox_11.0
 
-**Notes**:
-- The process of syncing the sources will take a long time. Depending on your internet connection speed and the syncing method, it can take hours.
-- After building, your build may have problems with decryption. If this happens, you will need to work on your device tree.
+    # Set up build environment
+    if [ -f "build/envsetup.sh" ]; then
+        source build/envsetup.sh
+    else
+        print_error "build/envsetup.sh not found! Build environment setup failed."
+        exit 1
+    fi
 
-### 2. Place Device Trees and Kernel
-You have to place your device trees and kernels in the proper locations. For example:
-```bash
-cd ~/fox_12.1
-git clone https://gitlab.com/OrangeFox/device/lavender.git device/xiaomi/lavender
-```
+    # Export necessary variables
+    export ALLOW_MISSING_DEPENDENCIES=true
+    export FOX_BUILD_DEVICE="klein"
+    export LC_ALL="C"
+    export FOX_AB_DEVICE=1
 
-**What if there is no device tree for my device?**
-- Amend the OrangeFox/TWRP device tree for a device with similar specifications, or create a new device tree from scratch, either manually or by editing a template produced by some sort of "twrpgen" site (this is not a trivial task).
+    # Build for A/B device
+    lunch orangefox_klein-eng
+    mka recoveryimage
+}
 
-### 3. Build It
-```bash
-cd ~/OrangeFox
-/bin/bash # if your Linux shell isn't bash
-export ALLOW_MISSING_DEPENDENCIES=true
-export FOX_BUILD_DEVICE=<device>
-export LC_ALL="C"
+# Check system requirements
+check_requirements() {
+    print_status "Checking system requirements..."
 
-# For all branches
-source build/envsetup.sh
+    # Check available disk space (need at least 100GB)
+    available_space=$(df -BG ~ | awk 'NR==2 {print $4}' | sed 's/G//')
+    if [ "$available_space" -lt 100 ]; then
+        print_error "Insufficient disk space. Need at least 100GB, have ${available_space}GB"
+        exit 1
+    fi
 
-# For the 11.0 (or higher) branch, if the device has a separate recovery partition
-lunch twrp_<device>-eng && mka adbd recoveryimage
+    # Check RAM (need at least 16GB)
+    total_ram=$(free -g | awk '/^Mem:/{print $2}')
+    if [ "$total_ram" -lt 16 ]; then
+        print_error "Insufficient RAM. Need at least 16GB, have ${total_ram}GB"
+        exit 1
+    fi
+}
 
-# For the 11.0 (or higher) branch, with A/B partitioning, and no separate recovery partition
-lunch twrp_<device>-eng && mka adbd bootimage
+# Main execution
+main() {
+    print_status "Starting OrangeFox build process for Black Shark 3 (Klein)..."
 
-# For the 12.1 (or higher) branch, vendor_boot-as-recovery builds [this is highly experimental and unsupported!]
-lunch twrp_<device>-eng && mka adbd vendorbootimage
-```
+    check_requirements
+    setup_git
+    install_packages
+    install_repo
+    setup_python
+    setup_environment
+    setup_device_tree
+    build_recovery
 
-### Building Tips
-- If you encounter errors related to anything with a ".py" extension or anything containing "py2", it means you need to install Python 2.x. Run `python --version` to check your default version.
-- Ensure that your default Python for building is Python 2.x.
-- If you get build errors related to "ui.xml for TW_THEME", ensure that the `bootable/recovery/gui/theme/` directory has been properly synced. You might need to run:
-  ```bash
-  git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
-  ```
-- If the device is not a Xiaomi MIUI device, consider adding:
-  ```bash
-  export OF_DISABLE_MIUI_SPECIFIC_FEATURES=1
-  ```
-  or
-  ```bash
-  export FOX_VANILLA_BUILD=1
-  ```
+    print_status "Build process completed!"
+}
 
-### If the Build Fails Because the Size of the Recovery is Too Big
-1. If the kernel supports LZMA compression, use:
-   ```bash
-   export OF_USE_LZMA_COMPRESSION=1
-   ```
-2. Use:
-   ```bash
-   export FOX_DRASTIC_SIZE_REDUCTION=1
-   ```
-   (this must come after all other exports).
-3. Other potential ways to reduce the size of the recovery image:
-   - Disable extra languages in `BoardConfig.mk`: `TW_EXTRA_LANGUAGES :=`
-   - Disable NTFS_3G in `BoardConfig.mk`: `TW_INCLUDE_NTFS_3G :=`
-   - Disable some other features in `BoardConfig.mk`:
-     ```bash
-     TW_EXCLUDE_TZDATA := true
-     TW_EXCLUDE_LPDUMP := true
-     ```
-
-### Final Recovery Image
-If there were no errors during compilation, the final recovery image will be present in:
-```
-out/target/product/[device]/OrangeFox-unofficial-[device].img
-```
-
-### Help
-If you want help/support with respect to building OrangeFox for your device, go to the [OrangeFox Recovery Discord server](https://wiki.orangefox.tech/en/dev/building).
-
-Make sure to follow the rules of the Telegram and Discord groups to avoid warnings or bans.
-
-If you encounter build errors or issues booting up a successful build, provide:
-- A link to your device tree (exact version used).
-- A link to a full log of your entire build process (do NOT just post screenshots).
-- A list of all the exact commands used in building.
-
-For detailed assistance, provide:
-- A detailed account of what you tried and what happened.
-- A full account of the OrangeFox build variables used.
-- A logcat if booting is unsuccessful, or recovery logs if the recovery is not behaving correctly.
-
-**Do NOT post vague messages like "it doesn't boot" or "it fails". Provide detailed information for effective help.**
-
-### Configurations
-OrangeFox has many configurations and build variables ("build vars") that give developers control over the features built into the recovery. You should put the OrangeFox-specific build vars in a shell script or in `vendorsetup.sh` in your device tree.
-
-**Note**: Do NOT put OrangeFox-specific build variables that start with "FOX_" in `BoardConfig.mk` - they will not be processed properly if they are in any ".mk" file.
-
-### Additional Resources
-- [OrangeFox Sync Repository](https://gitlab.com/OrangeFox/sync)
-- [OrangeFox Building Instructions](https://wiki.orangefox.tech/en/dev/building)
+# Execute main function
+main
