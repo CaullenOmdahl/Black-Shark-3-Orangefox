@@ -83,8 +83,8 @@ setup_environment() {
         git clone https://gitlab.com/OrangeFox/sync.git
     fi
     cd sync
-    if [ ! -d "$HOME/fox_11.0/.repo" ]; then
-        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
+    if [ ! -f "$HOME/fox_11.0/.repo/manifest.xml" ]; then
+        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0 --ssh 1
     else
         print_status "OrangeFox source code already exists. Skipping repo sync."
     fi
