@@ -80,6 +80,18 @@ create_roomservice() {
 EOF
 }
 
+# Setup device tree
+setup_device_tree() {
+    print_status "Setting up device tree..."
+    cd ~/fox_11.0
+    # Remove existing device tree to avoid conflicts
+    if [ -d "device/blackshark" ]; then
+        rm -rf device/blackshark
+    fi
+    # Clone the device tree into device/blackshark
+    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/
+}
+
 # Setup build environment
 setup_environment() {
     print_status "Setting up build environment..."
@@ -227,6 +239,7 @@ main() {
     install_repo
     setup_python
     setup_environment
+    setup_device_tree  # Added back as per your request
     clone_additional_repos
     fix_device_tree
     build_recovery
