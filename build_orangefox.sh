@@ -44,7 +44,23 @@ install_packages() {
         gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses5-dev \
         x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils \
         xsltproc unzip fontconfig python2.7 python-is-python2 aria2 \
-        android-sdk-platform-tools adb fastboot repo openjdk-8-jdk
+        android-sdk-platform-tools adb fastboot openjdk-8-jdk
+}
+
+# Install repo tool
+install_repo() {
+    print_status "Installing the repo command..."
+    mkdir -p ~/bin
+    PATH=~/bin:$PATH
+    if [ ! -f ~/bin/repo ]; then
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+    fi
+    # Add repo to PATH in bashrc
+    if ! grep -q 'export PATH=~/bin:$PATH' ~/.bashrc; then
+        echo 'export PATH=~/bin:$PATH' >> ~/.bashrc
+        source ~/.bashrc
+    fi
 }
 
 # Setup Python environment
@@ -90,7 +106,7 @@ setup_device_tree() {
              revision="main" />
 </manifest>
 EOF
-
+    
     # Sync device tree
     print_status "Syncing device tree..."
     repo sync -j$(nproc --all)
@@ -125,7 +141,7 @@ check_requirements() {
     print_status "Checking system requirements..."
     
     # Check available disk space (need at least 100GB)
-    available_space=$(df -BG ~/fox_11.0 | awk 'NR==2 {print $4}' | sed 's/G//')
+    available_space=$(df -BG ~ | awk 'NR==2 {print $4}' | sed 's/G//')
     if [ "$available_space" -lt 100 ]; then
         print_error "Insufficient disk space. Need at least 100GB, have ${available_space}GB"
         exit 1
@@ -146,6 +162,7 @@ main() {
     check_requirements
     setup_git
     install_packages
+    install_repo
     setup_python
     setup_environment
     setup_device_tree
