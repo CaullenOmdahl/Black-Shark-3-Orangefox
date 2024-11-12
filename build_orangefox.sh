@@ -114,7 +114,7 @@ setup_environment() {
 setup_device_tree() {
     print_status "Setting up device tree..."
         mkdir "$HOME/fox_11.0/device/blackshark"
-    cd "$HOME/fox_11.0/device/
+    cd "$HOME/fox_11.0/device/"
     if [ ! -d "klein" ]; then
         print_status "Cloning device tree..."
         git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree blackshark
@@ -268,7 +268,7 @@ check_requirements() {
 
 # Main execution
 main() {
-    print_status "Starting OrangeFox build process for Black Shark 3"
+    print_status "Starting OrangeFox build process for Black Shark 3 (Klein)..."
 
     check_requirements
     setup_git
