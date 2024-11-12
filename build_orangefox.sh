@@ -64,6 +64,22 @@ setup_python() {
     sudo update-alternatives --set python /usr/bin/python2
 }
 
+# Create roomservice.xml
+create_roomservice() {
+    print_status "Creating roomservice.xml..."
+    mkdir -p ~/.repo/local_manifests
+    cat > ~/.repo/local_manifests/roomservice.xml << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+    <remote name="github" fetch="https://github.com/" />
+    <project path="device/blackshark/klein"
+             name="CaullenOmdahl/Blackshark-3-TWRP-Device-Tree"
+             remote="github"
+             revision="main" />
+</manifest>
+EOF
+}
+
 # Setup build environment
 setup_environment() {
     print_status "Setting up build environment..."
@@ -73,29 +89,27 @@ setup_environment() {
         git clone https://gitlab.com/OrangeFox/sync.git
     fi
     cd sync
+
+    # Remove existing source directory if needed
+    if [ -d "$HOME/fox_11.0" ]; then
+        rm -rf "$HOME/fox_11.0"
+    fi
+
+    # Create roomservice.xml to include device tree during sync
+    create_roomservice
+
+    # Sync OrangeFox sources
     if [ ! -f "$HOME/fox_11.0/build/envsetup.sh" ]; then
-        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
+        ./orangefox_sync.sh --branch 11.0 --path "$HOME/fox_11.0"
     else
         print_status "OrangeFox source code already exists. Skipping repo sync."
     fi
 }
 
-# Setup device tree
-setup_device_tree() {
-    print_status "Setting up device tree..."
-    cd ~/fox_11.0
-    # Remove existing device tree to avoid conflicts
-    if [ -d "device/blackshark" ]; then
-        rm -rf device/blackshark
-    fi
-    # Clone the device tree into device/blackshark/klein
-    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/
-}
-
 # Clone missing repositories
 clone_additional_repos() {
     print_status "Cloning additional repositories..."
-    cd ~/fox_11.0
+    cd "$HOME/fox_11.0"
     # Clone vendor/twrp if missing
     if [ ! -d "vendor/twrp" ]; then
         mkdir -p vendor
@@ -112,16 +126,17 @@ clone_additional_repos() {
     fi
     # Clone bootable/recovery if missing
     if [ ! -d "bootable/recovery" ]; then
+        mkdir -p bootable
         cd bootable
         git clone https://gitlab.com/OrangeFox/android_bootable_recovery.git recovery
         cd ../
     fi
 }
 
-# Fix obsolete variables in device tree
+# Fix obsolete variables and syntax in device tree
 fix_device_tree() {
     print_status "Fixing device tree issues..."
-    DEVICE_MK=~/fox_11.0/device/blackshark/klein/device.mk
+    DEVICE_MK="$HOME/fox_11.0/device/blackshark/klein/device.mk"
 
     # Remove obsolete PRODUCT_STATIC_BOOT_CONTROL_HAL
     if grep -q "PRODUCT_STATIC_BOOT_CONTROL_HAL" "$DEVICE_MK"; then
@@ -131,24 +146,24 @@ fix_device_tree() {
     fi
 
     # Ensure proper indentation and separators in device.mk
-    sed -i 's/^[ ]*/\t/' "$DEVICE_MK"
+    sed -i 's/^[ ]\+/\t/' "$DEVICE_MK"
 
     # Fix any missing backslashes in device.mk
     sed -i '/^[^#].*[^\\]$/ s/$/ \\/' "$DEVICE_MK"
 
     # Fix vendorsetup.sh to remove obsolete commands
-    VENDOR_SETUP=~/fox_11.0/device/blackshark/klein/vendorsetup.sh
+    VENDOR_SETUP="$HOME/fox_11.0/device/blackshark/klein/vendorsetup.sh"
     if [ -f "$VENDOR_SETUP" ]; then
         sed -i '/add_lunch_combo/d' "$VENDOR_SETUP"
         print_status "Removed obsolete add_lunch_combo from vendorsetup.sh."
     fi
 
     # Define COMMON_LUNCH_CHOICES in AndroidProducts.mk
-    ANDROID_PRODUCTS_MK=~/fox_11.0/device/blackshark/klein/AndroidProducts.mk
+    ANDROID_PRODUCTS_MK="$HOME/fox_11.0/device/blackshark/klein/AndroidProducts.mk"
     if [ -f "$ANDROID_PRODUCTS_MK" ]; then
         if ! grep -q "COMMON_LUNCH_CHOICES" "$ANDROID_PRODUCTS_MK"; then
-            echo -e '\nCOMMON_LUNCH_CHOICES := \\' >> "$ANDROID_PRODUCTS_MK"
-            echo '    omni_klein-eng \\' >> "$ANDROID_PRODUCTS_MK"
+            echo -e '\nCOMMON_LUNCH_CHOICES += \' >> "$ANDROID_PRODUCTS_MK"
+            echo '    omni_klein-eng \' >> "$ANDROID_PRODUCTS_MK"
             echo '    omni_klein-userdebug' >> "$ANDROID_PRODUCTS_MK"
             print_status "Added COMMON_LUNCH_CHOICES to AndroidProducts.mk."
         fi
@@ -158,7 +173,7 @@ fix_device_tree() {
 # Build OrangeFox
 build_recovery() {
     print_status "Starting build process..."
-    cd ~/fox_11.0
+    cd "$HOME/fox_11.0"
 
     # Set up build environment
     if [ -f "build/envsetup.sh" ]; then
@@ -213,7 +228,6 @@ main() {
     setup_python
     setup_environment
     clone_additional_repos
-    setup_device_tree
     fix_device_tree
     build_recovery
 
