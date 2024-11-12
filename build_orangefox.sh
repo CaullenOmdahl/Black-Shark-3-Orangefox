@@ -67,8 +67,8 @@ setup_python() {
 # Create roomservice.xml
 create_roomservice() {
     print_status "Creating roomservice.xml..."
-    mkdir -p "$HOME/.repo/local_manifests"
-    cat > "$HOME/.repo/local_manifests/roomservice.xml" << EOF
+    mkdir -p "$HOME/fox_11.0/.repo/local_manifests"
+    cat > "$HOME/fox_11.0/.repo/local_manifests/roomservice.xml" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
     <remote name="github" fetch="https://github.com/" />
