@@ -114,10 +114,10 @@ setup_environment() {
 setup_device_tree() {
     print_status "Setting up device tree..."
         mkdir "$HOME/fox_11.0/device/blackshark"
-    cd "$HOME/fox_11.0/device/blackshark"
+    cd "$HOME/fox_11.0/device/
     if [ ! -d "klein" ]; then
         print_status "Cloning device tree..."
-        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree klein
+        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree blackshark
     else
         print_status "Device tree already exists. Updating..."
         cd klein
