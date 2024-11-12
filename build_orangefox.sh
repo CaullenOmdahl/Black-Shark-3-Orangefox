@@ -89,7 +89,7 @@ setup_device_tree() {
     cd ~/OrangeFox_build
     
     # Clone device tree
-    if [ ! -d "device/blackshark/klein" ]; then
+    if [ ! -d "device/blackshark/" ]; then
         mkdir -p device/blackshark
         git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
     fi
