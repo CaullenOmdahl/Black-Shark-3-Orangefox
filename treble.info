@@ -1,0 +1,9 @@
+Project Treble: Supported
+VNDK Version: 30.0
+Manifest Location: Modern
+System as Root: Enabled
+Seamless Upgrades: Enabled
+Dynamic Partitions: Enabled
+CPU Archetecture: ARM64
+Binder Archetecture: 64-bit 
+Type of GSI Required: system-arm64-ab.img.xz

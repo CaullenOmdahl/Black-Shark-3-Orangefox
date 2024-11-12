@@ -1,0 +1,10 @@
+Summary of Conversation:
+- Discussed building OrangeFox for BlackShark SHARK KLE-H0.
+- Provided a `build.sh` script to automate the setup and build process.
+- Addressed issues with missing dependencies, specifically Python 2 and unzip.
+- Updated the script to include checks for existing installations and to install missing packages.
+- Suggested best practices for managing the build environment.
+- Build from our own device tree located at https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree
+- Write a seperate python file to make changes to the device tree to ensure compatibility, and to remove deprecated calls, and enable all features.
+- Make sure we target Android 11
+
