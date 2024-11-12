@@ -75,7 +75,7 @@ create_roomservice() {
     <project path="device/blackshark"
              name="CaullenOmdahl/Blackshark-3-TWRP-Device-Tree"
              remote="github"
-             revision="master" />
+             revision="main" />
 </manifest>
 
 EOF
