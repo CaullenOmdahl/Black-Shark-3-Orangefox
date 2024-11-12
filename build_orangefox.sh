@@ -42,11 +42,11 @@ install_packages() {
     print_status "Installing required packages..."
     sudo apt update
     sudo apt install -y \
-        git-core gnupg flex bison build-essential zip curl zlib1g-dev \
+        git gnupg flex bison build-essential zip curl zlib1g-dev \
         gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses-dev \
         x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils \
         xsltproc unzip fontconfig aria2 \
-        android-sdk-platform-tools adb fastboot openjdk-8-jdk
+        android-sdk-platform-tools adb fastboot openjdk-8-jdk python2
 }
 
 # Install repo tool
@@ -62,10 +62,6 @@ install_repo() {
 # Setup Python environment
 setup_python() {
     print_status "Setting up Python environment..."
-    # Install Python 2 if not installed
-    if ! command -v python2 &> /dev/null; then
-        sudo apt install -y python2
-    fi
     # Update alternatives to use python2
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
@@ -81,27 +77,27 @@ setup_python() {
 # Setup build environment
 setup_environment() {
     print_status "Setting up build environment..."
-    cd ~/
-    if [ ! -d "fox_11.0" ]; then
-        mkdir fox_11.0
-        cd fox_11.0
-        print_status "Creating local manifest for device tree..."
-        mkdir -p .repo/local_manifests
-        cat > .repo/local_manifests/roomservice.xml << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<manifest>
-    <project path="device/blackshark/klein"
-             name="YourUsername/Blackshark-3-OrangeFox-Device-Tree"
-             remote="github"
-             revision="main" />
-</manifest>
-EOF
-        print_status "Initializing OrangeFox source code..."
-        repo init -u https://gitlab.com/OrangeFox/Manifest.git -b 11.0
-        repo sync -j$(nproc --all)
+    mkdir -p ~/OrangeFox_sync
+    cd ~/OrangeFox_sync
+    if [ ! -d "sync" ]; then
+        git clone https://gitlab.com/OrangeFox/sync.git
+    fi
+    cd sync
+    if [ ! -d "$HOME/fox_11.0/.repo" ]; then
+        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
     else
         print_status "OrangeFox source code already exists. Skipping repo sync."
-        cd fox_11.0
+    fi
+}
+
+# Setup device tree
+setup_device_tree() {
+    print_status "Setting up device tree..."
+    cd ~/fox_11.0
+    if [ ! -d "device/blackshark/klein" ]; then
+        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark
+    else
+        print_status "Device tree already exists. Skipping clone."
     fi
 }
 
@@ -158,6 +154,7 @@ main() {
     install_repo
     setup_python
     setup_environment
+    setup_device_tree
     build_recovery
 
     print_status "Build process completed!"
