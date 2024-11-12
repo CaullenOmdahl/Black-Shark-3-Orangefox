@@ -84,11 +84,12 @@ setup_environment() {
 setup_device_tree() {
     print_status "Setting up device tree..."
     cd ~/fox_11.0
-    if [ ! -d "device/blackshark/klein" ]; then
-        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
-    else
-        print_status "Device tree already exists. Skipping clone."
+    # Remove existing device tree to avoid conflicts
+    if [ -d "device/blackshark" ]; then
+        rm -rf device/blackshark
     fi
+    # Clone the device tree into device/blackshark
+    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark
 }
 
 # Clone missing repositories
