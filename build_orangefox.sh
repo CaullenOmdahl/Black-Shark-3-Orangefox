@@ -114,7 +114,7 @@ export TARGET_DEVICE_ALT="klein"
 export OF_TARGET_DEVICES="klein"
 export OF_MAINTAINER="CaullenOmdahl"
 export FOX_VERSION="R11.1"
-export FOX_BUILD_TYPE="Stable"
+export FOX_BUILD_TYPE="Testing"
 export OF_SCREEN_H=2400
 export OF_STATUS_H=100
 export OF_STATUS_INDENT_LEFT=48
@@ -127,8 +127,6 @@ export OF_NO_TREBLE_COMPATIBILITY_CHECK=1
 export OF_NO_MIUI_PATCH_WARNING=1
 export OF_SKIP_MULTIUSER_FOLDERS_BACKUP=1
 export OF_USE_LZMA_COMPRESSION=1
-export FOX_DRASTIC_SIZE_REDUCTION=1
-export OF_DISABLE_MIUI_SPECIFIC_FEATURES=1
 EOF
     chmod +x device/blackshark/klein/vendorsetup.sh
 }
