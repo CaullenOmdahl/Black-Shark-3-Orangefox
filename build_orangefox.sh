@@ -27,7 +27,7 @@ setup_git() {
         read -p "Enter your Git email: " git_email
         git config --global user.email "$git_email"
     fi
-    
+
     if [ -z "$(git config --global user.name)" ]; then
         print_status "Setting up Git user name..."
         read -p "Enter your Git name: " git_name
@@ -41,9 +41,9 @@ install_packages() {
     sudo apt update
     sudo apt install -y \
         git-core gnupg flex bison build-essential zip curl zlib1g-dev \
-        gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses5-dev \
+        gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses-dev \
         x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils \
-        xsltproc unzip fontconfig python2.7 python-is-python2 aria2 \
+        xsltproc unzip fontconfig aria2 \
         android-sdk-platform-tools adb fastboot openjdk-8-jdk
 }
 
@@ -51,27 +51,35 @@ install_packages() {
 install_repo() {
     print_status "Installing the repo command..."
     mkdir -p ~/bin
-    PATH=~/bin:$PATH
+    export PATH=~/bin:$PATH
     if [ ! -f ~/bin/repo ]; then
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
     fi
-    # Add repo to PATH in bashrc
+    # Add repo to PATH in bashrc if not already present
     if ! grep -q 'export PATH=~/bin:$PATH' ~/.bashrc; then
         echo 'export PATH=~/bin:$PATH' >> ~/.bashrc
-        source ~/.bashrc
     fi
+    source ~/.bashrc
 }
 
 # Setup Python environment
 setup_python() {
     print_status "Setting up Python environment..."
-    if ! command -v python2.7 &> /dev/null; then
-        sudo apt install -y python2.7
+    # Install Python 2 if not installed
+    if ! command -v python2 &> /dev/null; then
+        sudo apt install -y python2
     fi
-    sudo update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
+    # Update alternatives to use python2
+    sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
-    sudo update-alternatives --set python /usr/bin/python2.7
+    sudo update-alternatives --set python /usr/bin/python2
+    # Ensure pip for Python 2 is installed
+    if ! command -v pip2 &> /dev/null; then
+        curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+        sudo python2 get-pip.py
+        rm get-pip.py
+    fi
 }
 
 # Setup build environment
@@ -94,7 +102,7 @@ setup_environment() {
 setup_device_tree() {
     print_status "Setting up device tree..."
     cd ~/fox_11.0
-    
+
     # Create local manifest
     mkdir -p .repo/local_manifests
     cat > .repo/local_manifests/roomservice.xml << EOF
@@ -106,17 +114,17 @@ setup_device_tree() {
              revision="main" />
 </manifest>
 EOF
-    
+
     # Sync device tree
     print_status "Syncing device tree..."
-    repo sync -j$(nproc --all)
+    repo sync -j$(nproc --all) device/blackshark/klein
 }
 
 # Build OrangeFox
 build_recovery() {
     print_status "Starting build process..."
     cd ~/fox_11.0
-    
+
     # Set up build environment
     if [ -f "build/envsetup.sh" ]; then
         source build/envsetup.sh
@@ -124,7 +132,7 @@ build_recovery() {
         print_error "build/envsetup.sh not found! Build environment setup failed."
         exit 1
     fi
-    
+
     # Export necessary variables
     export ALLOW_MISSING_DEPENDENCIES=true
     export FOX_BUILD_DEVICE="klein"
@@ -139,14 +147,14 @@ build_recovery() {
 # Check system requirements
 check_requirements() {
     print_status "Checking system requirements..."
-    
+
     # Check available disk space (need at least 100GB)
     available_space=$(df -BG ~ | awk 'NR==2 {print $4}' | sed 's/G//')
     if [ "$available_space" -lt 100 ]; then
         print_error "Insufficient disk space. Need at least 100GB, have ${available_space}GB"
         exit 1
     fi
-    
+
     # Check RAM (need at least 16GB)
     total_ram=$(free -g | awk '/^Mem:/{print $2}')
     if [ "$total_ram" -lt 16 ]; then
@@ -158,7 +166,7 @@ check_requirements() {
 # Main execution
 main() {
     print_status "Starting OrangeFox build process for Black Shark 3 (Klein)..."
-    
+
     check_requirements
     setup_git
     install_packages
@@ -167,7 +175,7 @@ main() {
     setup_environment
     setup_device_tree
     build_recovery
-    
+
     print_status "Build process completed!"
 }
 
