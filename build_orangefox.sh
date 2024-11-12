@@ -113,6 +113,7 @@ setup_environment() {
 # Setup device tree
 setup_device_tree() {
     print_status "Setting up device tree..."
+        mkdir "$HOME/fox_11.0/device/blackshark"
     cd "$HOME/fox_11.0/device/blackshark"
     if [ ! -d "klein" ]; then
         print_status "Cloning device tree..."
