@@ -62,15 +62,15 @@ setup_python() {
 setup_environment() {
     print_status "Setting up build environment..."
     
-    # Create working directory
-    mkdir -p ~/OrangeFox_build
-    cd ~/OrangeFox_build
     
     # Initialize repo tool
-    if [ ! -d ".repo" ]; then
-        print_status "Initializing repo tool..."
-        repo init -u https://gitlab.com/OrangeFox/sync.git -b master  # Use the correct repo URL
-        repo sync -j$(nproc --all)
+    if [ ! -d "OrangeFox_sync" ]; then
+        print_status "Initializing sync tool..."
+        mkdir ~/OrangeFox_sync
+        cd OrangeFox_sync
+        git clone https://gitlab.com/OrangeFox/sync.git
+        cd sync
+	    ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
     fi
     
     # Clone necessary repositories
@@ -79,19 +79,21 @@ setup_environment() {
         cd scripts
         sudo bash setup/android_build_env.sh
         sudo bash setup/install_android_sdk.sh
-        cd ..
+        cd ~/
     fi
+
+
 }
 
 # Setup device tree
 setup_device_tree() {
     print_status "Setting up device tree..."
-    cd ~/OrangeFox_build
+    cd ~/fox_11.0
     
     # Clone device tree
     if [ ! -d "device/blackshark/" ]; then
         mkdir -p device/blackshark
-        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
+        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/
     fi
 
     # Clone theme
@@ -113,7 +115,7 @@ FOX_MANIFEST_VERSION="11.0"
 export TARGET_DEVICE_ALT="klein"
 export OF_TARGET_DEVICES="klein"
 export OF_MAINTAINER="CaullenOmdahl"
-export FOX_VERSION="R11.1"
+export FOX_VERSION="R11.0"
 export FOX_BUILD_TYPE="Testing"
 export OF_SCREEN_H=2400
 export OF_STATUS_H=100
@@ -134,7 +136,7 @@ EOF
 # Build OrangeFox
 build_recovery() {
     print_status "Starting build process..."
-    cd ~/OrangeFox_build
+    cd ~/fox_11.0
     
     # Set up build environment
     if [ -f "build/envsetup.sh" ]; then
