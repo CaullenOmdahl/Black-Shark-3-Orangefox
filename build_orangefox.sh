@@ -62,7 +62,6 @@ setup_python() {
 setup_environment() {
     print_status "Setting up build environment..."
     
-    
     # Initialize repo tool
     if [ ! -d "OrangeFox_sync" ]; then
         print_status "Initializing sync tool..."
@@ -70,7 +69,7 @@ setup_environment() {
         cd OrangeFox_sync
         git clone https://gitlab.com/OrangeFox/sync.git
         cd sync
-	    ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
+        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
     fi
     
     # Clone necessary repositories
@@ -81,8 +80,6 @@ setup_environment() {
         sudo bash setup/install_android_sdk.sh
         cd ~/
     fi
-
-
 }
 
 # Setup device tree
@@ -101,6 +98,21 @@ setup_device_tree() {
         mkdir -p bootable/recovery/gui
         git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
     fi
+}
+
+# Create roomservice.xml
+create_roomservice() {
+    print_status "Creating roomservice.xml..."
+    mkdir -p ~/.repo/local_manifests
+    cat > ~/.repo/local_manifests/roomservice.xml << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+    <project path="device/blackshark/klein"
+             name="CaullenOmdahl/Blackshark-3-TWRP-Device-Tree"
+             remote="github"
+             revision="main" />
+</manifest>
+EOF
 }
 
 # Update vendorsetup.sh
@@ -173,7 +185,6 @@ build_recovery() {
     export LC_ALL="C"
     export FOX_AB_DEVICE=1
 
-    
     # Build for A/B device
     lunch omni_klein-eng
     mka adbd bootimage
@@ -208,6 +219,7 @@ main() {
     setup_python
     setup_environment
     setup_device_tree
+    create_roomservice
     update_vendorsetup
     build_recovery
     
