@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export PATH=~/bin:$PATH
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -51,16 +53,10 @@ install_packages() {
 install_repo() {
     print_status "Installing the repo command..."
     mkdir -p ~/bin
-    export PATH=~/bin:$PATH
     if [ ! -f ~/bin/repo ]; then
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
     fi
-    # Add repo to PATH in bashrc if not already present
-    if ! grep -q 'export PATH=~/bin:$PATH' ~/.bashrc; then
-        echo 'export PATH=~/bin:$PATH' >> ~/.bashrc
-    fi
-    source ~/.bashrc
 }
 
 # Setup Python environment
