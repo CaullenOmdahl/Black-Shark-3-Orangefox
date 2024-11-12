@@ -89,7 +89,7 @@ setup_device_tree() {
         rm -rf device/blackshark
     fi
     # Clone the device tree into device/blackshark/klein
-    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
+    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/
 }
 
 # Clone missing repositories
