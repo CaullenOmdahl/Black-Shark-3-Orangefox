@@ -268,7 +268,7 @@ check_requirements() {
 
 # Main execution
 main() {
-    print_status "Starting OrangeFox build process for Black Shark 3 (Klein)..."
+    print_status "Starting OrangeFox build process for Black Shark 3"
 
     check_requirements
     setup_git
