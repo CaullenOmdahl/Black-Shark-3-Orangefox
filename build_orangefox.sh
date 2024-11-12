@@ -42,7 +42,7 @@ install_packages() {
     print_status "Installing required packages..."
     sudo apt update
     sudo apt install -y \
-        git-core gnupg repo flex bison build-essential zip curl zlib1g-dev \
+        git-core gnupg flex bison build-essential zip curl zlib1g-dev \
         gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses-dev \
         x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils \
         xsltproc unzip fontconfig aria2 \
@@ -85,23 +85,9 @@ setup_environment() {
     if [ ! -d "fox_11.0" ]; then
         mkdir fox_11.0
         cd fox_11.0
-        print_status "Initializing OrangeFox source code..."
-        repo init -u https://gitlab.com/OrangeFox/Manifest.git -b 11.0
-        repo sync -j$(nproc --all)
-    else
-        print_status "OrangeFox source code already exists. Skipping repo sync."
-        cd fox_11.0
-    fi
-}
-
-# Setup device tree
-setup_device_tree() {
-    print_status "Setting up device tree..."
-    cd ~/fox_11.0
-
-    # Create local manifest
-    mkdir -p .repo/local_manifests
-    cat > .repo/local_manifests/roomservice.xml << EOF
+        print_status "Creating local manifest for device tree..."
+        mkdir -p .repo/local_manifests
+        cat > .repo/local_manifests/roomservice.xml << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
     <project path="device/blackshark/klein"
@@ -110,10 +96,13 @@ setup_device_tree() {
              revision="main" />
 </manifest>
 EOF
-
-    # Sync device tree
-    print_status "Syncing device tree..."
-    repo sync -j$(nproc --all) device/blackshark/klein
+        print_status "Initializing OrangeFox source code..."
+        repo init -u https://gitlab.com/OrangeFox/Manifest.git -b 11.0
+        repo sync -j$(nproc --all)
+    else
+        print_status "OrangeFox source code already exists. Skipping repo sync."
+        cd fox_11.0
+    fi
 }
 
 # Build OrangeFox
@@ -169,7 +158,6 @@ main() {
     install_repo
     setup_python
     setup_environment
-    setup_device_tree
     build_recovery
 
     print_status "Build process completed!"
