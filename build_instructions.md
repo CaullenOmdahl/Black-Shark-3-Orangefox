@@ -90,7 +90,7 @@ setup_environment() {
 setup_device_tree() {
     print_status "Setting up device tree..."
     cd ~/fox_11.0
-    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
+    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark
 }
 
 # Build OrangeFox
