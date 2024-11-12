@@ -175,7 +175,7 @@ build_recovery() {
 
     
     # Build for A/B device
-    lunch twrp_klein-eng
+    lunch omni_klein-eng
     mka adbd bootimage
 }
 
