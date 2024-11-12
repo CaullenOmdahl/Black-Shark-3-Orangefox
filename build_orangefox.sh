@@ -67,8 +67,8 @@ setup_python() {
 # Create roomservice.xml
 create_roomservice() {
     print_status "Creating roomservice.xml..."
-    mkdir -p ~/.repo/local_manifests
-    cat > ~/.repo/local_manifests/roomservice.xml << EOF
+    mkdir -p "$HOME/.repo/local_manifests"
+    cat > "$HOME/.repo/local_manifests/roomservice.xml" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
     <remote name="github" fetch="https://github.com/" />
@@ -80,41 +80,48 @@ create_roomservice() {
 EOF
 }
 
-# Setup device tree
-setup_device_tree() {
-    print_status "Setting up device tree..."
-    cd ~/fox_11.0
-    # Remove existing device tree to avoid conflicts
-    if [ -d "device/blackshark" ]; then
-        rm -rf device/blackshark
-    fi
-    # Clone the device tree into device/blackshark
-    git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/
-}
-
 # Setup build environment
 setup_environment() {
     print_status "Setting up build environment..."
-    mkdir -p ~/OrangeFox_sync
-    cd ~/OrangeFox_sync
+    mkdir -p "$HOME/OrangeFox_sync"
+    cd "$HOME/OrangeFox_sync"
     if [ ! -d "sync" ]; then
         git clone https://gitlab.com/OrangeFox/sync.git
+    else
+        print_status "OrangeFox sync repository already exists. Updating..."
+        cd sync
+        git pull
+        cd ..
     fi
     cd sync
-
-    # Remove existing source directory if needed
-    if [ -d "$HOME/fox_11.0" ]; then
-        rm -rf "$HOME/fox_11.0"
-    fi
 
     # Create roomservice.xml to include device tree during sync
     create_roomservice
 
     # Sync OrangeFox sources
-    if [ ! -f "$HOME/fox_11.0/build/envsetup.sh" ]; then
+    if [ ! -d "$HOME/fox_11.0" ]; then
+        print_status "Syncing OrangeFox source code..."
         ./orangefox_sync.sh --branch 11.0 --path "$HOME/fox_11.0"
     else
-        print_status "OrangeFox source code already exists. Skipping repo sync."
+        print_status "OrangeFox source code already exists. Updating..."
+        cd "$HOME/fox_11.0"
+        repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune
+        cd -
+    fi
+}
+
+# Setup device tree
+setup_device_tree() {
+    print_status "Setting up device tree..."
+    cd "$HOME/fox_11.0/device/blackshark"
+    if [ ! -d "klein" ]; then
+        print_status "Cloning device tree..."
+        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree klein
+    else
+        print_status "Device tree already exists. Updating..."
+        cd klein
+        git pull
+        cd ..
     fi
 }
 
@@ -128,6 +135,11 @@ clone_additional_repos() {
         cd vendor
         git clone https://github.com/TeamWin/android_vendor_twrp.git twrp
         cd ../
+    else
+        print_status "vendor/twrp already exists. Updating..."
+        cd vendor/twrp
+        git pull
+        cd ../../
     fi
     # Clone vendor/recovery if missing
     if [ ! -d "vendor/recovery" ]; then
@@ -135,6 +147,11 @@ clone_additional_repos() {
         cd vendor
         git clone https://gitlab.com/OrangeFox/vendor/recovery.git recovery
         cd ../
+    else
+        print_status "vendor/recovery already exists. Updating..."
+        cd vendor/recovery
+        git pull
+        cd ../../
     fi
     # Clone bootable/recovery if missing
     if [ ! -d "bootable/recovery" ]; then
@@ -142,6 +159,11 @@ clone_additional_repos() {
         cd bootable
         git clone https://gitlab.com/OrangeFox/android_bootable_recovery.git recovery
         cd ../
+    else
+        print_status "bootable/recovery already exists. Updating..."
+        cd bootable/recovery
+        git pull
+        cd ../../
     fi
 }
 
@@ -170,12 +192,15 @@ fix_device_tree() {
         print_status "Removed obsolete add_lunch_combo from vendorsetup.sh."
     fi
 
+    # Ensure vendorsetup.sh is executable
+    chmod +x "$VENDOR_SETUP"
+
     # Define COMMON_LUNCH_CHOICES in AndroidProducts.mk
     ANDROID_PRODUCTS_MK="$HOME/fox_11.0/device/blackshark/klein/AndroidProducts.mk"
     if [ -f "$ANDROID_PRODUCTS_MK" ]; then
         if ! grep -q "COMMON_LUNCH_CHOICES" "$ANDROID_PRODUCTS_MK"; then
-            echo -e '\nCOMMON_LUNCH_CHOICES += \' >> "$ANDROID_PRODUCTS_MK"
-            echo '    omni_klein-eng \' >> "$ANDROID_PRODUCTS_MK"
+            echo -e '\nCOMMON_LUNCH_CHOICES += \\' >> "$ANDROID_PRODUCTS_MK"
+            echo '    omni_klein-eng \\' >> "$ANDROID_PRODUCTS_MK"
             echo '    omni_klein-userdebug' >> "$ANDROID_PRODUCTS_MK"
             print_status "Added COMMON_LUNCH_CHOICES to AndroidProducts.mk."
         fi
@@ -198,15 +223,26 @@ build_recovery() {
     # Export necessary variables
     export ALLOW_MISSING_DEPENDENCIES=true
     export LC_ALL="C"
-    export FOX_BUILD_DEVICE="klein"
-    export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
-    export OF_AB_DEVICE=1
-    # Set theme variables to fix ui.xml error
-    export TARGET_SCREEN_WIDTH=1080
-    export TARGET_SCREEN_HEIGHT=2400
+
+    # Source the device-specific build vars
+    VENDOR_SETUP="$HOME/fox_11.0/device/blackshark/klein/vendorsetup.sh"
+    if [ -f "$VENDOR_SETUP" ]; then
+        source "$VENDOR_SETUP"
+    else
+        print_warning "vendorsetup.sh not found. Using default build variables."
+        export FOX_BUILD_DEVICE="klein"
+        export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
+        export OF_AB_DEVICE=1
+        export TARGET_SCREEN_WIDTH=1080
+        export TARGET_SCREEN_HEIGHT=2400
+    fi
+
+    # Clean previous builds
+    print_status "Cleaning previous builds..."
+    mka clean
 
     # Build for A/B device
-    lunch omni_klein-eng
+    lunch omni_"$FOX_BUILD_DEVICE"-eng
     mka recoveryimage
 }
 
@@ -239,7 +275,7 @@ main() {
     install_repo
     setup_python
     setup_environment
-    setup_device_tree  # Added back as per your request
+    setup_device_tree
     clone_additional_repos
     fix_device_tree
     build_recovery
