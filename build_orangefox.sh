@@ -115,57 +115,6 @@ create_roomservice() {
 EOF
 }
 
-# Update vendorsetup.sh
-update_vendorsetup() {
-    print_status "Updating vendorsetup.sh..."
-    mkdir -p device/blackshark/klein
-
-    # Define the new exports
-    declare -A new_exports=(
-        ["TARGET_DEVICE_ALT"]="klein"
-        ["OF_TARGET_DEVICES"]="klein"
-        ["OF_MAINTAINER"]="CaullenOmdahl"
-        ["FOX_VERSION"]="R11.0"
-        ["FOX_BUILD_TYPE"]="Testing"
-        ["OF_SCREEN_H"]="2400"
-        ["OF_STATUS_H"]="100"
-        ["OF_STATUS_INDENT_LEFT"]="48"
-        ["OF_STATUS_INDENT_RIGHT"]="48"
-        ["OF_ALLOW_DISABLE_NAVBAR"]="0"
-        ["OF_USE_MAGISKBOOT"]="1"
-        ["OF_USE_MAGISKBOOT_FOR_ALL_PATCHES"]="1"
-        ["OF_DONT_PATCH_ENCRYPTED_DEVICE"]="1"
-        ["OF_NO_TREBLE_COMPATIBILITY_CHECK"]="1"
-        ["OF_NO_MIUI_PATCH_WARNING"]="1"
-        ["OF_SKIP_MULTIUSER_FOLDERS_BACKUP"]="1"
-        ["OF_USE_LZMA_COMPRESSION"]="1"
-    )
-
-    # Create or update vendorsetup.sh
-    {
-        echo '#!/bin/bash'
-        for key in "${!new_exports[@]}"; do
-            # Check if the export already exists in the file
-            if grep -q "^export $key=" device/blackshark/klein/vendorsetup.sh; then
-                # If it exists, check if the value is different
-                current_value=$(grep "^export $key=" device/blackshark/klein/vendorsetup.sh | cut -d'=' -f2 | tr -d '"')
-                if [[ "${new_exports[$key]}" != "$current_value" ]]; then
-                    echo "Keeping original value for $key: $current_value"
-                else
-                    echo "Export $key already exists with the same value: $current_value"
-                fi
-            else
-                # If it doesn't exist, add it
-                echo "export $key=\"${new_exports[$key]}\""
-            fi
-        done
-    } > device/blackshark/klein/vendorsetup.sh.tmp
-
-    # Move the temporary file to the original file
-    mv device/blackshark/klein/vendorsetup.sh.tmp device/blackshark/klein/vendorsetup.sh
-    chmod +x device/blackshark/klein/vendorsetup.sh
-}
-
 # Build OrangeFox
 build_recovery() {
     print_status "Starting build process..."
@@ -220,7 +169,6 @@ main() {
     setup_environment
     setup_device_tree
     create_roomservice
-    update_vendorsetup
     build_recovery
     
     print_status "Build process completed!"
