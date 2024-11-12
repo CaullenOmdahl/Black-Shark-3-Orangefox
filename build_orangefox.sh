@@ -71,7 +71,7 @@ create_roomservice() {
     cat > "$HOME/fox_11.0/.repo/local_manifests/roomservice.xml" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
-    <remote name="github" fetch="https://github.com/CaullenOmdahl/" />
+    <remote name="devicetree" fetch="https://github.com/CaullenOmdahl/" />
     <project path="device/blackshark"
              name="Blackshark-3-TWRP-Device-Tree"
              remote="github"
