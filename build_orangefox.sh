@@ -47,7 +47,7 @@ install_packages() {
         android-sdk-platform-tools adb fastboot repo openjdk-8-jdk
 }
 
-# Setup Python 2 as default for building
+# Setup Python environment
 setup_python() {
     print_status "Setting up Python environment..."
     if ! command -v python2.7 &> /dev/null; then
@@ -61,31 +61,16 @@ setup_python() {
 # Setup build environment
 setup_environment() {
     print_status "Setting up build environment..."
-    
-    # Initialize repo tool
-    if [ ! -d "OrangeFox_sync" ]; then
-        print_status "Initializing sync tool..."
-        mkdir ~/OrangeFox_sync
-        cd OrangeFox_sync
-        git clone https://gitlab.com/OrangeFox/sync.git
-        cd sync
-        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
-    fi
-    
-    # Clone necessary repositories
-    if [ ! -d "scripts" ]; then
-        git clone https://gitlab.com/OrangeFox/misc/scripts
-        cd scripts
-        sudo bash setup/android_build_env.sh
-        sudo bash setup/install_android_sdk.sh
-        cd ~/
-    fi
-
-    # Clone theme
-    if [ ! -d "bootable/recovery/gui/theme" ]; then
-        print_status "Cloning theme repository..."
-        mkdir -p bootable/recovery/gui
-        git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
+    cd ~/
+    if [ ! -d "fox_11.0" ]; then
+        mkdir fox_11.0
+        cd fox_11.0
+        print_status "Initializing OrangeFox source code..."
+        repo init -u https://gitlab.com/OrangeFox/Manifest.git -b 11.0
+        repo sync -j$(nproc --all)
+    else
+        print_status "OrangeFox source code already exists. Skipping repo sync."
+        cd fox_11.0
     fi
 }
 
@@ -94,39 +79,21 @@ setup_device_tree() {
     print_status "Setting up device tree..."
     cd ~/fox_11.0
     
-    # Clone device tree
-    if [ ! -d "device/blackshark/" ]; then
-        mkdir -p device/blackshark
-        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/
-    fi
-
-    # Clone theme
-    if [ ! -d "bootable/recovery/gui/theme" ]; then
-        print_status "Cloning theme repository..."
-        mkdir -p bootable/recovery/gui
-        git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
-    fi
-
-    # Set screen dimensions and theme in device.mk
-    echo "Setting screen dimensions and theme..."
-    echo "TARGET_SCREEN_WIDTH := 1080" >> device/blackshark/klein/device.mk
-    echo "TARGET_SCREEN_HEIGHT := 2400" >> device/blackshark/klein/device.mk
-    echo "TW_THEME := portrait_hdpi" >> device/blackshark/klein/device.mk
-}
-
-# Create roomservice.xml
-create_roomservice() {
-    print_status "Creating roomservice.xml..."
-    mkdir -p ~/.repo/local_manifests
-    cat > ~/.repo/local_manifests/roomservice.xml << EOF
+    # Create local manifest
+    mkdir -p .repo/local_manifests
+    cat > .repo/local_manifests/roomservice.xml << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
     <project path="device/blackshark/klein"
-             name="CaullenOmdahl/Blackshark-3-TWRP-Device-Tree"
+             name="YourUsername/Blackshark-3-OrangeFox-Device-Tree"
              remote="github"
              revision="main" />
 </manifest>
 EOF
+
+    # Sync device tree
+    print_status "Syncing device tree..."
+    repo sync -j$(nproc --all)
 }
 
 # Build OrangeFox
@@ -149,8 +116,8 @@ build_recovery() {
     export FOX_AB_DEVICE=1
 
     # Build for A/B device
-    lunch omni_klein-eng
-    mka adbd bootimage
+    lunch orangefox_klein-eng
+    mka recoveryimage
 }
 
 # Check system requirements
@@ -158,7 +125,7 @@ check_requirements() {
     print_status "Checking system requirements..."
     
     # Check available disk space (need at least 100GB)
-    available_space=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
+    available_space=$(df -BG ~/fox_11.0 | awk 'NR==2 {print $4}' | sed 's/G//')
     if [ "$available_space" -lt 100 ]; then
         print_error "Insufficient disk space. Need at least 100GB, have ${available_space}GB"
         exit 1
@@ -174,7 +141,7 @@ check_requirements() {
 
 # Main execution
 main() {
-    print_status "Starting OrangeFox build process for BlackShark SHARK KLE-H0..."
+    print_status "Starting OrangeFox build process for Black Shark 3 (Klein)..."
     
     check_requirements
     setup_git
@@ -182,7 +149,6 @@ main() {
     setup_python
     setup_environment
     setup_device_tree
-    create_roomservice
     build_recovery
     
     print_status "Build process completed!"
