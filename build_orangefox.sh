@@ -72,8 +72,12 @@ create_roomservice() {
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
     <remote name="github" fetch="https://github.com/CaullenOmdahl/" />
-    <project path="device/blackshark/klein" name="Blackshark-3-TWRP-Device-Tree" remote="github revision="android-11.0" />
+    <project path="device/blackshark"
+             name="Blackshark-3-TWRP-Device-Tree"
+             remote="github"
+             revision="android-11.0" />
 </manifest>
+
 EOF
 }
 
