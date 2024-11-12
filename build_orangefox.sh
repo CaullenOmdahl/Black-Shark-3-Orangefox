@@ -80,6 +80,13 @@ setup_environment() {
         sudo bash setup/install_android_sdk.sh
         cd ~/
     fi
+
+    # Clone theme
+    if [ ! -d "bootable/recovery/gui/theme" ]; then
+        print_status "Cloning theme repository..."
+        mkdir -p bootable/recovery/gui
+        git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
+    fi
 }
 
 # Setup device tree
@@ -95,9 +102,16 @@ setup_device_tree() {
 
     # Clone theme
     if [ ! -d "bootable/recovery/gui/theme" ]; then
+        print_status "Cloning theme repository..."
         mkdir -p bootable/recovery/gui
         git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
     fi
+
+    # Set screen dimensions and theme in device.mk
+    echo "Setting screen dimensions and theme..."
+    echo "TARGET_SCREEN_WIDTH := 1080" >> device/blackshark/klein/device.mk
+    echo "TARGET_SCREEN_HEIGHT := 2400" >> device/blackshark/klein/device.mk
+    echo "TW_THEME := portrait_hdpi" >> device/blackshark/klein/device.mk
 }
 
 # Create roomservice.xml
