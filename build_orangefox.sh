@@ -26,14 +26,12 @@ setup_git() {
     print_status "Configuring Git..."
     if [ -z "$(git config --global user.email)" ]; then
         print_status "Setting up Git user email..."
-        read -p "Enter your Git email: " git_email
-        git config --global user.email "$git_email"
+        git config --global user.email "Caullen.Omdahl@gmail.com"
     fi
 
     if [ -z "$(git config --global user.name)" ]; then
         print_status "Setting up Git user name..."
-        read -p "Enter your Git name: " git_name
-        git config --global user.name "$git_name"
+        git config --global user.name "CaullenOmdahl"
     fi
 }
 
@@ -66,12 +64,6 @@ setup_python() {
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
     sudo update-alternatives --set python /usr/bin/python2
-    # Ensure pip for Python 2 is installed
-    if ! command -v pip2 &> /dev/null; then
-        curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
-        sudo python2 get-pip.py
-        rm get-pip.py
-    fi
 }
 
 # Setup build environment
@@ -83,8 +75,8 @@ setup_environment() {
         git clone https://gitlab.com/OrangeFox/sync.git
     fi
     cd sync
-    if [ ! -f "$HOME/fox_11.0/.repo/manifest.xml" ]; then
-        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0 --ssh 1
+    if [ ! -f "$HOME/fox_11.0/build/envsetup.sh" ]; then
+        ./orangefox_sync.sh --branch 11.0 --path ~/fox_11.0
     else
         print_status "OrangeFox source code already exists. Skipping repo sync."
     fi
@@ -94,10 +86,29 @@ setup_environment() {
 setup_device_tree() {
     print_status "Setting up device tree..."
     cd ~/fox_11.0
-    if [ ! -d "device/blackshark/klein" ]; then
+    if [ ! -d "device/blackshark" ]; then
         git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark
     else
         print_status "Device tree already exists. Skipping clone."
+    fi
+}
+
+# Clone missing repositories
+clone_additional_repos() {
+    print_status "Cloning additional repositories..."
+    cd ~/fox_11.0
+    # Clone vendor/recovery if missing
+    if [ ! -d "vendor/recovery" ]; then
+        mkdir -p vendor
+        cd vendor
+        git clone https://gitlab.com/OrangeFox/vendor/recovery.git
+        cd ..
+    fi
+    # Clone bootable/recovery if missing
+    if [ ! -d "bootable/recovery" ]; then
+        cd bootable
+        git clone https://gitlab.com/OrangeFox/android_bootable_recovery.git recovery
+        cd ..
     fi
 }
 
@@ -107,21 +118,17 @@ build_recovery() {
     cd ~/fox_11.0
 
     # Set up build environment
-    if [ -f "build/envsetup.sh" ]; then
-        source build/envsetup.sh
-    else
-        print_error "build/envsetup.sh not found! Build environment setup failed."
-        exit 1
-    fi
+    source build/envsetup.sh
 
     # Export necessary variables
     export ALLOW_MISSING_DEPENDENCIES=true
-    export FOX_BUILD_DEVICE="klein"
     export LC_ALL="C"
-    export FOX_AB_DEVICE=1
+    export FOX_BUILD_DEVICE="klein"
+    export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
+    export OF_AB_DEVICE=1
 
     # Build for A/B device
-    lunch orangefox_klein-eng
+    lunch omni_klein-eng
     mka recoveryimage
 }
 
@@ -155,6 +162,7 @@ main() {
     setup_python
     setup_environment
     setup_device_tree
+    clone_additional_repos
     build_recovery
 
     print_status "Build process completed!"
