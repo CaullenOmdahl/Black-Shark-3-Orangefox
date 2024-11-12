@@ -25,12 +25,10 @@ print_warning() {
 setup_git() {
     print_status "Configuring Git..."
     if [ -z "$(git config --global user.email)" ]; then
-        print_status "Setting up Git user email..."
         git config --global user.email "Caullen.Omdahl@gmail.com"
     fi
 
     if [ -z "$(git config --global user.name)" ]; then
-        print_status "Setting up Git user name..."
         git config --global user.name "CaullenOmdahl"
     fi
 }
@@ -86,8 +84,8 @@ setup_environment() {
 setup_device_tree() {
     print_status "Setting up device tree..."
     cd ~/fox_11.0
-    if [ ! -d "device/blackshark" ]; then
-        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark
+    if [ ! -d "device/blackshark/klein" ]; then
+        git clone https://github.com/CaullenOmdahl/Blackshark-3-TWRP-Device-Tree device/blackshark/klein
     else
         print_status "Device tree already exists. Skipping clone."
     fi
@@ -97,18 +95,25 @@ setup_device_tree() {
 clone_additional_repos() {
     print_status "Cloning additional repositories..."
     cd ~/fox_11.0
+    # Clone vendor/twrp if missing
+    if [ ! -d "vendor/twrp" ]; then
+        mkdir -p vendor
+        cd vendor
+        git clone https://github.com/TeamWin/android_vendor_twrp.git twrp
+        cd ../
+    fi
     # Clone vendor/recovery if missing
     if [ ! -d "vendor/recovery" ]; then
         mkdir -p vendor
         cd vendor
-        git clone https://gitlab.com/OrangeFox/vendor/recovery.git
-        cd ..
+        git clone https://gitlab.com/OrangeFox/vendor/recovery.git recovery
+        cd ../
     fi
     # Clone bootable/recovery if missing
     if [ ! -d "bootable/recovery" ]; then
         cd bootable
         git clone https://gitlab.com/OrangeFox/android_bootable_recovery.git recovery
-        cd ..
+        cd ../
     fi
 }
 
@@ -118,7 +123,12 @@ build_recovery() {
     cd ~/fox_11.0
 
     # Set up build environment
-    source build/envsetup.sh
+    if [ -f "build/envsetup.sh" ]; then
+        source build/envsetup.sh
+    else
+        print_error "build/envsetup.sh not found! Build environment setup failed."
+        exit 1
+    fi
 
     # Export necessary variables
     export ALLOW_MISSING_DEPENDENCIES=true
@@ -126,10 +136,24 @@ build_recovery() {
     export FOX_BUILD_DEVICE="klein"
     export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
     export OF_AB_DEVICE=1
+    # Set theme variables to fix ui.xml error
+    export TARGET_SCREEN_WIDTH=1080
+    export TARGET_SCREEN_HEIGHT=2400
 
     # Build for A/B device
-    lunch orangefox_klein-eng
+    lunch omni_klein-eng
     mka recoveryimage
+}
+
+# Fix obsolete variables in device tree
+fix_device_tree() {
+    print_status "Fixing device tree issues..."
+    DEVICE_MK=~/fox_11.0/device/blackshark/klein/device.mk
+    if grep -q "PRODUCT_STATIC_BOOT_CONTROL_HAL" "$DEVICE_MK"; then
+        sed -i '/PRODUCT_STATIC_BOOT_CONTROL_HAL/d' "$DEVICE_MK"
+        echo 'PRODUCT_PACKAGES += libbootcontrol' >> "$DEVICE_MK"
+        print_status "Replaced obsolete PRODUCT_STATIC_BOOT_CONTROL_HAL with libbootcontrol."
+    fi
 }
 
 # Check system requirements
@@ -161,8 +185,9 @@ main() {
     install_repo
     setup_python
     setup_environment
-    setup_device_tree
     clone_additional_repos
+    setup_device_tree
+    fix_device_tree
     build_recovery
 
     print_status "Build process completed!"
