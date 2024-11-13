@@ -133,21 +133,21 @@ setup_environment() {
 # Clone missing repositories
 clone_additional_repos() {
     print_status "Cloning additional repositories..."
-    local branch="android-11"
+    local branch="fox_11.0"
     cd "$HOME/fox_11.0"
 
     # Clone vendor/twrp if missing
     if [ ! -d "vendor/twrp" ]; then
         mkdir -p vendor
         cd vendor
-        git clone -b $branch https://github.com/TeamWin/android_vendor_twrp.git twrp
+        git clone -b android-11 https://github.com/TeamWin/android_vendor_twrp.git twrp
         cd ../
     else
         print_status "vendor/twrp already exists. Updating..."
         cd vendor/twrp
         git fetch TeamWin
-        git checkout $branch || git checkout -b $branch TeamWin/$branch
-        git reset --hard TeamWin/$branch
+        git checkout android-11 || git checkout -b android-11 TeamWin/android-11
+        git reset --hard TeamWin/android-11
         cd ../../
     fi
 
@@ -155,12 +155,12 @@ clone_additional_repos() {
     if [ ! -d "vendor/recovery" ]; then
         mkdir -p vendor
         cd vendor
-        git clone https://gitlab.com/OrangeFox/vendor/recovery.git recovery
+        git clone -b $branch https://gitlab.com/OrangeFox/vendor/recovery.git recovery
         cd ../
     else
         print_status "vendor/recovery already exists. Updating..."
         cd vendor/recovery
-        retry_command git pull origin master
+        retry_command git pull origin $branch
         cd ../../
     fi
 
@@ -168,7 +168,7 @@ clone_additional_repos() {
     if [ ! -d "bootable/recovery" ]; then
         mkdir -p bootable
         cd bootable
-        git clone https://gitlab.com/OrangeFox/android_bootable_recovery.git recovery
+        git clone -b $branch https://gitlab.com/OrangeFox/android_bootable_recovery.git recovery
         cd ../
     else
         print_status "bootable/recovery already exists. Updating..."
