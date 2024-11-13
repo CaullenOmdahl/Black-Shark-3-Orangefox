@@ -209,25 +209,17 @@ build_recovery() {
     export ALLOW_MISSING_DEPENDENCIES=true
     export LC_ALL="C"
 
-    # Source the device-specific build vars
-    VENDOR_SETUP="$HOME/fox_11.0/device/blackshark/klein/vendorsetup.sh"
-    if [ -f "$VENDOR_SETUP" ]; then
-        source "$VENDOR_SETUP"
-    else
-        print_warning "vendorsetup.sh not found. Using default build variables."
-        export FOX_BUILD_DEVICE="klein"
-        export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
-        export OF_AB_DEVICE=1
-        export TARGET_SCREEN_WIDTH=1080
-        export TARGET_SCREEN_HEIGHT=2400
-    fi
+    # Remove sourcing of vendorsetup.sh
+    # source "$VENDOR_SETUP"  # Remove or comment out this line
+
+    # Use lunch to select the device
+    lunch omni_klein-eng
 
     # Clean previous builds
     print_status "Cleaning previous builds..."
     mka clean
 
-    # Build for A/B device
-    lunch omni_"$FOX_BUILD_DEVICE"-eng
+    # Start the build
     mka recoveryimage
 }
 
