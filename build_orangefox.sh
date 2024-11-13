@@ -183,12 +183,29 @@ clone_additional_repos() {
     if [ ! -d "bootable/recovery/gui/theme" ]; then
         git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
     fi
+
+    # Ensure orangefox.mk exists
+    if [ ! -f "$HOME/fox_11.0/vendor/recovery/orangefox.mk" ]; then
+        print_status "Creating missing orangefox.mk file..."
+        cat > "$HOME/fox_11.0/vendor/recovery/orangefox.mk" << EOF
+# OrangeFox recovery makefile
+
+# Include common OrangeFox definitions
+include vendor/recovery/common.mk
+EOF
+    fi
 }
 
 # Fix obsolete variables and syntax in device tree
 fix_device_tree() {
     print_status "Fixing device tree issues..."
     DEVICE_MK="$HOME/fox_11.0/device/blackshark/klein/device.mk"
+
+    # Add proper LOCAL_PATH and include CLEAR_VARS
+    if ! grep -q "LOCAL_PATH" "$DEVICE_MK"; then
+        sed -i '1s;^;LOCAL_PATH := \$(call my-dir)\ninclude \$(CLEAR_VARS)\n\n;' "$DEVICE_MK"
+        print_status "Added LOCAL_PATH and include CLEAR_VARS to device.mk."
+    fi
 
     # Remove obsolete PRODUCT_STATIC_BOOT_CONTROL_HAL
     if grep -q "PRODUCT_STATIC_BOOT_CONTROL_HAL" "$DEVICE_MK"; then
@@ -229,6 +246,22 @@ fix_device_tree() {
 build_recovery() {
     print_status "Starting build process..."
     cd "$HOME/fox_11.0"
+
+    # Source OrangeFox A11 script for environment setup
+    if [ -f "$HOME/fox_11.0/vendor/recovery/OrangeFox_A11.sh" ]; then
+        source "$HOME/fox_11.0/vendor/recovery/OrangeFox_A11.sh"
+    else
+        print_error "OrangeFox_A11.sh not found in vendor/recovery! Build environment setup failed."
+        exit 1
+    fi
+
+    # Set additional build variables
+    export TARGET_ARCH=arm64
+    export FOX_AB_DEVICE=1
+    export OF_USE_MAGISKBOOT=1
+    export OF_USE_MAGISKBOOT_FOR_ALL_PATCHES=1
+    export OF_SCREEN_H=2280
+    export OF_HIDE_NOTCH=1
 
     # Set up build environment
     if [ -f "build/envsetup.sh" ]; then
