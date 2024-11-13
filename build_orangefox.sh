@@ -54,12 +54,15 @@ setup_git() {
 install_packages() {
     print_status "Installing required packages..."
     sudo apt update
-    sudo apt install -y \
-        git gnupg flex bison build-essential zip curl zlib1g-dev \
-        gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses-dev \
-        x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils \
-        xsltproc unzip fontconfig aria2 \
-        android-sdk-platform-tools adb fastboot openjdk-8-jdk python2
+    sudo apt install -y git gnupg flex bison gperf build-essential zip curl \
+        zlib1g-dev gcc-multilib g++-multilib lib32ncurses5-dev x11proto-core-dev \
+        libx11-dev lib32z1-dev ccache libgl1-mesa-dev libxml2-utils xsltproc \
+        unzip bc python3 python-is-python3
+
+    # Install ccache for faster rebuilds
+    sudo apt install ccache
+    export USE_CCACHE=1
+    ccache -M 50G
 }
 
 # Install repo tool
@@ -75,7 +78,7 @@ install_repo() {
 # Setup Python environment
 setup_python() {
     print_status "Setting up Python environment..."
-    # Update alternatives to use python2
+    # Update alternatives to use python2 if needed
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
     sudo update-alternatives --set python /usr/bin/python2
@@ -118,7 +121,7 @@ setup_environment() {
     # Sync OrangeFox sources
     if [ ! -d "$HOME/fox_11.0" ]; then
         print_status "Syncing OrangeFox source code..."
-        ./orangefox_sync.sh --branch 11.0 --path "$HOME/fox_11.0"
+        ./orangefox_sync.sh --branch fox_11.0 --path "$HOME/fox_11.0"
     else
         print_status "OrangeFox source code already exists. Updating..."
         cd "$HOME/fox_11.0"
@@ -157,7 +160,7 @@ clone_additional_repos() {
     else
         print_status "vendor/recovery already exists. Updating..."
         cd vendor/recovery
-        retry_command git pull origin main
+        retry_command git pull origin master
         cd ../../
     fi
 
@@ -174,6 +177,11 @@ clone_additional_repos() {
         git checkout $branch || git checkout -b $branch origin/$branch
         git reset --hard origin/$branch
         cd ../../
+    fi
+
+    # Clone OrangeFox theme assets for UI issues
+    if [ ! -d "bootable/recovery/gui/theme" ]; then
+        git clone https://gitlab.com/OrangeFox/misc/theme.git bootable/recovery/gui/theme
     fi
 }
 
