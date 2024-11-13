@@ -21,6 +21,23 @@ print_warning() {
     echo -e "${YELLOW}[!] ${1}${NC}"
 }
 
+# Retry mechanism for commands
+retry_command() {
+    local retries=3
+    local wait=10
+    for ((i=1; i<=retries; i++)); do
+        "$@" && break || {
+            if [ $i -lt $retries ]; then
+                print_warning "Command failed. Attempt $i/$retries. Retrying in $wait seconds..."
+                sleep $wait
+            else
+                print_error "Command failed after $retries attempts."
+                exit 1
+            fi
+        }
+    done
+}
+
 # Configure Git
 setup_git() {
     print_status "Configuring Git..."
@@ -113,19 +130,24 @@ setup_environment() {
 # Clone missing repositories
 clone_additional_repos() {
     print_status "Cloning additional repositories..."
+    local branch="android-11"
     cd "$HOME/fox_11.0"
+
     # Clone vendor/twrp if missing
     if [ ! -d "vendor/twrp" ]; then
         mkdir -p vendor
         cd vendor
-        git clone https://github.com/TeamWin/android_vendor_twrp.git twrp
+        git clone -b $branch https://github.com/TeamWin/android_vendor_twrp.git twrp
         cd ../
     else
         print_status "vendor/twrp already exists. Updating..."
         cd vendor/twrp
-        git pull
+        git fetch TeamWin
+        git checkout $branch || git checkout -b $branch TeamWin/$branch
+        git reset --hard TeamWin/$branch
         cd ../../
     fi
+
     # Clone vendor/recovery if missing
     if [ ! -d "vendor/recovery" ]; then
         mkdir -p vendor
@@ -135,9 +157,10 @@ clone_additional_repos() {
     else
         print_status "vendor/recovery already exists. Updating..."
         cd vendor/recovery
-        git pull
+        retry_command git pull
         cd ../../
     fi
+
     # Clone bootable/recovery if missing
     if [ ! -d "bootable/recovery" ]; then
         mkdir -p bootable
@@ -147,7 +170,7 @@ clone_additional_repos() {
     else
         print_status "bootable/recovery already exists. Updating..."
         cd bootable/recovery
-        git pull
+        retry_command git pull
         cd ../../
     fi
 }
@@ -184,8 +207,8 @@ fix_device_tree() {
     ANDROID_PRODUCTS_MK="$HOME/fox_11.0/device/blackshark/klein/AndroidProducts.mk"
     if [ -f "$ANDROID_PRODUCTS_MK" ]; then
         if ! grep -q "COMMON_LUNCH_CHOICES" "$ANDROID_PRODUCTS_MK"; then
-            echo -e '\nCOMMON_LUNCH_CHOICES += \\' >> "$ANDROID_PRODUCTS_MK"
-            echo '    omni_klein-eng \\' >> "$ANDROID_PRODUCTS_MK"
+            echo -e '\nCOMMON_LUNCH_CHOICES += \' >> "$ANDROID_PRODUCTS_MK"
+            echo '    omni_klein-eng \' >> "$ANDROID_PRODUCTS_MK"
             echo '    omni_klein-userdebug' >> "$ANDROID_PRODUCTS_MK"
             print_status "Added COMMON_LUNCH_CHOICES to AndroidProducts.mk."
         fi
@@ -208,9 +231,6 @@ build_recovery() {
     # Export necessary variables
     export ALLOW_MISSING_DEPENDENCIES=true
     export LC_ALL="C"
-
-    # Remove sourcing of vendorsetup.sh
-    # source "$VENDOR_SETUP"  # Remove or comment out this line
 
     # Use lunch to select the device
     lunch omni_klein-eng
