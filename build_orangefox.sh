@@ -33,7 +33,7 @@ retry_command() {
             else
                 print_error "Command failed after $retries attempts."
                 exit 1
-            }
+            fi
         }
     done
 }
@@ -170,7 +170,9 @@ clone_additional_repos() {
     else
         print_status "bootable/recovery already exists. Updating..."
         cd bootable/recovery
-        retry_command git pull origin main
+        git fetch origin
+        git checkout $branch || git checkout -b $branch origin/$branch
+        git reset --hard origin/$branch
         cd ../../
     fi
 }
@@ -188,7 +190,7 @@ fix_device_tree() {
     fi
 
     # Ensure proper indentation and separators in device.mk
-    sed -i 's/^[ ]\+/	/' "$DEVICE_MK"
+    sed -i 's/^[ ]\+/\t/' "$DEVICE_MK"
 
     # Fix any missing backslashes in device.mk
     sed -i '/^[^#].*[^\\]$/ s/$/ \\/' "$DEVICE_MK"
