@@ -63,6 +63,7 @@ setup_python() {
     sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
     sudo update-alternatives --set python /usr/bin/python2
 }
+
 # Create roomservice.xml
 create_roomservice() {
     print_status "Creating roomservice.xml..."
@@ -70,15 +71,14 @@ create_roomservice() {
     cat > "$HOME/fox_11.0/.repo/local_manifests/roomservice.xml" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
-    <remote name="github" fetch="https://github.com/CaullenOmdahl/" />
+    <remote name="github-caullen" fetch="https://github.com/CaullenOmdahl/" />
     <project path="device/blackshark/klein"
              name="Blackshark-3-TWRP-Device-Tree"
-             remote="github"
+             remote="github-caullen"
              revision="main" />
 </manifest>
 EOF
 }
-
 
 # Setup build environment
 setup_environment() {
