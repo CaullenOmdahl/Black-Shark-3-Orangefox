@@ -33,7 +33,7 @@ retry_command() {
             else
                 print_error "Command failed after $retries attempts."
                 exit 1
-            fi
+            }
         }
     done
 }
@@ -122,7 +122,7 @@ setup_environment() {
     else
         print_status "OrangeFox source code already exists. Updating..."
         cd "$HOME/fox_11.0"
-        repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune
+        retry_command repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune
         cd -
     fi
 }
@@ -157,7 +157,7 @@ clone_additional_repos() {
     else
         print_status "vendor/recovery already exists. Updating..."
         cd vendor/recovery
-        retry_command git pull
+        retry_command git pull origin main
         cd ../../
     fi
 
@@ -170,7 +170,7 @@ clone_additional_repos() {
     else
         print_status "bootable/recovery already exists. Updating..."
         cd bootable/recovery
-        retry_command git pull
+        retry_command git pull origin main
         cd ../../
     fi
 }
@@ -188,7 +188,7 @@ fix_device_tree() {
     fi
 
     # Ensure proper indentation and separators in device.mk
-    sed -i 's/^[ ]\+/\t/' "$DEVICE_MK"
+    sed -i 's/^[ ]\+/	/' "$DEVICE_MK"
 
     # Fix any missing backslashes in device.mk
     sed -i '/^[^#].*[^\\]$/ s/$/ \\/' "$DEVICE_MK"
@@ -237,10 +237,10 @@ build_recovery() {
 
     # Clean previous builds
     print_status "Cleaning previous builds..."
-    mka clean
+    retry_command mka clean
 
     # Start the build
-    mka recoveryimage
+    retry_command mka recoveryimage
 }
 
 # Check system requirements
