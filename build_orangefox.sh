@@ -72,7 +72,7 @@ create_roomservice() {
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
     <remote name="github-caullen" fetch="https://github.com/CaullenOmdahl/" />
-    <project path="device/blackshark/klein"
+    <project path="device/blackshark"
              name="Blackshark-3-TWRP-Device-Tree"
              remote="github-caullen"
              revision="main" />
